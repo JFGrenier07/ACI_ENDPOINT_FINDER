@@ -1,7 +1,8 @@
-import paramiko
-import time
-import getpass
-import sys
+import requests
+import json
+import datetime, time
+from getpass import getpass
+requests.packages.urllib3.disable_warnings()
 
 # Définition des environnements ACI
 SANDBOX_IP = "10.10.20.14"
@@ -9,6 +10,14 @@ HOMELAB_IP = "192.168.0.200"
 LAB3_IP = "192.168.0.201"
 LAB4_IP = "192.168.0.202"
 ALL_IPS = [SANDBOX_IP, HOMELAB_IP, LAB3_IP, LAB4_IP]
+
+
+def getToken(host, username, password):
+    url = f"https://{host}/api/aaaLogin.json"
+    payload = json.dumps({"aaaUser": {"attributes": {"name": username, "pwd": password}}})
+    headers = {'Content-Type': 'application/json'}
+    response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+    return json.loads(response.text)['imdata'][0]['aaaLogin']['attributes']['token']
 
 def select_environment():
     while True:
@@ -18,9 +27,7 @@ def select_environment():
         print("3- Lab 3 (192.168.0.201)")
         print("4- Lab 4 (192.168.0.202)")
         print("5- All")
-        
-        choice = input("\nEntrez votre choix (1-5): ").strip()
-        
+        choice = input("Enter your choice (1-5): ").strip()
         if choice == "1":
             return [SANDBOX_IP]
         elif choice == "2":
@@ -32,88 +39,92 @@ def select_environment():
         elif choice == "5":
             return ALL_IPS
         else:
-            print("Choix invalide. Veuillez réessayer.")
+            print("Invalid choice. Please try again.")
 
-def connect_to_fabric(hostname, username, password):
-    """Établit une connexion SSH vers la fabric ACI"""
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname, username=username, password=password)
-        return ssh
-    except Exception as e:
-        print(f"Erreur de connexion à {hostname}: {str(e)}")
-        return None
-
-def execute_command(ssh, command):
-    """Exécute une commande sur la fabric ACI"""
-    try:
-        stdin, stdout, stderr = ssh.exec_command(command)
-        output = stdout.read().decode()
-        return output
-    except Exception as e:
-        print(f"Erreur lors de l'exécution de la commande: {str(e)}")
-        return None
-
-def main():
-    # Sélection de l'environnement
-    selected_ips = select_environment()
-    
-    # Demande des credentials
-    username = input("Username: ")
-    password = getpass.getpass("Password: ")
-    
-    # Établir les connexions
-    connections = {}
-    for ip in selected_ips:
-        ssh = connect_to_fabric(ip, username, password)
-        if ssh:
-            connections[ip] = ssh
-    
-    if not connections:
-        print("Aucune connexion n'a pu être établie.")
-        sys.exit(1)
-    
+def select_search_type():
     while True:
-        # Menu des commandes
-        print("\n=== Menu des Commandes ===")
-        print("1. show endpoint ip")
-        print("2. show endpoint mac")
-        print("3. Quitter")
-        
-        cmd_choice = input("\nChoisissez une commande (1-3): ")
-        
-        if cmd_choice == "1":
-            ip_address = input("\nEntrez l'adresse IP à rechercher: ")
-            
-            # Exécuter la commande sur chaque fabric sélectionnée
-            for fabric_ip, ssh in connections.items():
-                print(f"\n=== Résultats pour la fabric {fabric_ip} ===")
-                command = f"show endpoint ip {ip_address}"
-                output = execute_command(ssh, command)
-                if output:
-                    print(output)
-        
-        elif cmd_choice == "2":
-            mac_address = input("\nEntrez l'adresse MAC à rechercher: ")
-            
-            # Exécuter la commande sur chaque fabric sélectionnée
-            for fabric_ip, ssh in connections.items():
-                print(f"\n=== Résultats pour la fabric {fabric_ip} ===")
-                command = f"show endpoint mac {mac_address}"
-                output = execute_command(ssh, command)
-                if output:
-                    print(output)
-        
-        elif cmd_choice == "3":
-            print("Fermeture des connexions...")
-            for ssh in connections.values():
-                ssh.close()
-            print("Au revoir!")
-            break
-        
+        print("\nSelect search type:")
+        print("1- Search by IP address")
+        print("2- Search by MAC address")
+        print("3- Search by EPG")
+        choice = input("Enter your choice (1-5): ").strip()
+        if choice in ["1", "2", "3"]:
+            return choice
         else:
-            print("Choix invalide!")
+            print("Invalid choice. Please try again.")
+
+def get_search_criteria(search_type):
+    if search_type == "1":
+        return input("Enter IP address to track: ").strip()
+    elif search_type == "2":
+        while True:
+            mac = input("Enter MAC address (format: xx:xx:xx:xx:xx:xx): ").strip()
+            if len(mac.split(":")) == 6:
+                return mac
+            print("Invalid MAC address format. Please try again.")
+    else:
+        return input("Enter EPG name: ").strip()
+
+def build_query_url(host, search_type, search_value):
+    base_url = f"https://{host}/api/node/class/fvCEp.json?rsp-subtree=full&rsp-subtree-include=required"
+    if search_type == "1": # IP
+        return f"{base_url}&rsp-subtree-filter=eq(fvIp.addr,\"{search_value}\")"
+    elif search_type == "2": # MAC
+        return f"{base_url}&query-target-filter=eq(fvCEp.mac,\"{search_value}\")"
+    else: # EPG
+        return f"{base_url}&query-target-filter=wcard(fvCEp.dn,\"epg-{search_value}/\")"
+
+def track_endpoints():
+    username = input("Enter your ACI username: ").strip()
+    password = getpass("Enter your ACI password: ").strip()  # Use getpass to hide password input
+
+    environments = select_environment()
+    search_type = select_search_type()
+    search_value = get_search_criteria(search_type)
+
+    for host in environments:
+        print(f"\nTracking in environment: {host}")
+        token = getToken(host, username, password) # Get the token
+        headers = {'Cookie': f"APIC-cookie={token}"}
+        payload = {}
+
+        url = build_query_url(host, search_type, search_value)
+        print(f"Query URL: {url}")
+
+        response = requests.request("GET", url, headers=headers, data=payload, verify=False).json()
+
+        totalcount = int(response.get('totalCount', 0))
+        URL_LIST = []
+
+        for i in range(totalcount):
+            DN = response['imdata'][i]['fvCEp']['attributes']['dn']
+            URL_LIST.append(DN)
+
+        print("=" * 170)
+        print(f"{'Date':<22}{'Tenant':<15}{'App Profile':<20}{'EPG':<15}{'Encap':<12}{'MAC':<20}{'IP':<25}{'Path':<40}")
+        print("-" * 170)
+
+        for DN in URL_LIST:
+            url = f"https://{host}/mqapi2/troubleshoot.eptracker.json?ep={DN}"
+            response = requests.request("GET", url, headers=headers, data=payload, verify=False).json()
+
+            totalcount2 = int(response.get('totalCount', 0))
+
+            for j in range(totalcount2):
+                attributes = response['imdata'][j]['troubleshootEpTransition']['attributes']
+                date = attributes['date'].split('.')[0]  # Couper la date après les secondes
+                tenant = attributes['tenant']
+                ap = attributes['ap']
+                epg = attributes['epg']
+                encap = attributes['encap']
+                mac = attributes['mac']
+                ip = attributes['ip']
+                path = attributes['path']
+
+                print(f"{date:<22}{tenant:<15}{ap:<20}{epg:<15}{encap:<12}{mac:<20}{ip:<25}{path:<40}")
+
+        print("=" * 170)
 
 if __name__ == "__main__":
-    main()
+    track_endpoints()
+  
