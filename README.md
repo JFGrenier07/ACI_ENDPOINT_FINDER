@@ -1,49 +1,53 @@
-# ACI Endpoint Finder
+# ACI Endpoint Tracker
 
 ![Python](https://img.shields.io/badge/python-v3.6+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Network](https://img.shields.io/badge/network-Cisco%20ACI-blue.svg)
+![API](https://img.shields.io/badge/interface-REST%20API-green.svg)
 
-Un outil professionnel de recherche et de localisation d'endpoints dans les infrastructures Cisco ACI (Application Centric Infrastructure) via SSH.
+Un outil professionnel de tracking et d'analyse d'endpoints dans les infrastructures Cisco ACI (Application Centric Infrastructure) via REST API avec historique des transitions.
 
 ## 🎯 Vue d'ensemble
 
-**ACI Endpoint Finder** est un utilitaire réseau avancé qui permet aux administrateurs de :
-- Localiser rapidement des endpoints par IP ou MAC dans multiple fabrics ACI
-- Se connecter simultanément à plusieurs environnements ACI
-- Exécuter des recherches d'endpoints via interface interactive
-- Troubleshooter efficacement les problèmes de connectivité réseau
+**ACI Endpoint Tracker** est un utilitaire réseau avancé qui permet aux administrateurs de :
+- Tracker l'historique complet des transitions d'endpoints
+- Rechercher des endpoints par IP, MAC ou EPG via REST API
+- Analyser les mouvements d'endpoints à travers multiple fabrics ACI
+- Obtenir des informations détaillées sur les paths et encapsulations
+- Troubleshooter efficacement les problèmes de mobilité réseau
 
 ## 🚀 Fonctionnalités
 
-### 🔍 Recherche Multi-Critères
-- **Recherche par IP** : Localisation d'endpoints via adresse IP
-- **Recherche par MAC** : Identification d'endpoints via adresse MAC
-- **Multi-Fabric** : Support de plusieurs environnements ACI simultanément
-- **Recherche Interactive** : Interface utilisateur conviviale
+### 🔍 Tracking Multi-Critères
+- **Recherche par IP** : Tracking d'endpoints via adresse IP
+- **Recherche par MAC** : Suivi d'endpoints via adresse MAC
+- **Recherche par EPG** : Analyse par Endpoint Group
+- **Historique des Transitions** : Tracking complet des mouvements
 
 ### 🌐 Environnements Supportés
-- **Sandbox** : Environnement de test et développement
-- **Home Lab** : Laboratoire personnel
-- **Lab 3 & Lab 4** : Environnements de laboratoire avancés
-- **Multi-Sélection** : Recherche simultanée sur plusieurs fabrics
+- **Sandbox** : 10.10.20.14 - Environnement de test
+- **Home Lab** : 192.168.0.200 - Laboratoire personnel
+- **Lab 3** : 192.168.0.201 - Environnement Lab 3
+- **Lab 4** : 192.168.0.202 - Environnement Lab 4
+- **Multi-Sélection** : Tracking simultané sur tous les fabrics
 
 ### 🔧 Capacités Techniques
-- Connexions SSH sécurisées avec authentification
-- Gestion des timeouts et erreurs de connexion
-- Interface en ligne de commande interactive
-- Support des commandes "show endpoint" natives ACI
+- API REST ACI avec authentification par token
+- Interface troubleshoot.eptracker pour l'historique
+- Gestion automatique des sessions APIC
+- Affichage tabulaire formaté des résultats
+- Support multi-environnements simultané
 
 ## 📋 Prérequis
 
 ### Environnement Système
 - **Python** : 3.6 ou supérieur
-- **Accès SSH** : Connectivité vers les switches ACI
-- **Permissions** : Accès aux commandes "show endpoint"
+- **Accès réseau** : Connectivité HTTPS vers les APIC controllers
+- **Permissions** : Compte utilisateur ACI avec droits de lecture
 
 ### Dépendances Python
 ```bash
-paramiko>=2.7.0
+requests>=2.25.0
 ```
 
 ## 🛠️ Installation
@@ -60,15 +64,15 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Éditez le fichier `EP_Finder.py` pour configurer vos environnements ACI :
+Les environnements ACI sont préconfigurés dans le script :
 ```python
-environments = {
-    "1": {"name": "Sandbox", "ips": ["10.1.1.1", "10.1.1.2"]},
-    "2": {"name": "Home Lab", "ips": ["192.168.1.100", "192.168.1.101"]},
-    "3": {"name": "Lab 3", "ips": ["10.3.3.1", "10.3.3.2"]},
-    "4": {"name": "Lab 4", "ips": ["10.4.4.1", "10.4.4.2"]}
-}
+SANDBOX_IP = "10.10.20.14"
+HOMELAB_IP = "192.168.0.200"
+LAB3_IP = "192.168.0.201"
+LAB4_IP = "192.168.0.202"
 ```
+
+Pour modifier les adresses IP, éditez directement ces variables dans `EP_Finder.py`.
 
 ## 🎮 Instructions d'Exécution
 
@@ -79,165 +83,173 @@ python EP_Finder.py
 
 ### Workflow d'Utilisation
 
-#### 1. Sélection d'Environnement
+#### 1. Authentification
 ```bash
 $ python EP_Finder.py
-
-=== SÉLECTION D'ENVIRONNEMENT ACI ===
-1. Sandbox
-2. Home Lab
-3. Lab 3
-4. Lab 4
-5. Tous les environnements
-
-Choisissez un environnement (1-5): 2
+Enter your ACI username: admin
+Enter your ACI password: [saisie sécurisée]
 ```
 
-#### 2. Authentification
+#### 2. Sélection d'Environnement
 ```bash
-Nom d'utilisateur: admin
-Mot de passe: [saisie sécurisée]
+=== Sélection de l'Environnement ACI ===
+1- Sandbox (10.10.20.14)
+2- Home Lab (192.168.0.200)
+3- Lab 3 (192.168.0.201)
+4- Lab 4 (192.168.0.202)
+5- All
+Enter your choice (1-5): 2
 ```
 
-#### 3. Menu de Recherche
+#### 3. Type de Recherche
 ```bash
-=== RECHERCHE D'ENDPOINTS ===
-1. Rechercher par adresse IP
-2. Rechercher par adresse MAC
-3. Quitter
-
-Votre choix: 1
+Select search type:
+1- Search by IP address
+2- Search by MAC address
+3- Search by EPG
+Enter your choice (1-3): 1
 ```
 
-#### 4. Saisie de Critères
+#### 4. Critères de Recherche
 ```bash
-Entrez l'adresse IP à rechercher: 10.1.100.50
+Enter IP address to track: 10.1.100.50
 
-[Recherche en cours sur les fabrics sélectionnés...]
+[Tracking en cours...]
 ```
 
 ### Exemples d'Utilisation
 
-#### Recherche par IP
+#### Tracking par IP
 ```bash
 $ python EP_Finder.py
-Environnement: Home Lab
-Choix: 1
+Username: admin
+Password: [hidden]
+Environment: 2 (Home Lab)
+Search type: 1 (IP address)
 IP: 10.1.100.50
 
-Résultats:
-Switch: leaf-101
-Endpoint trouvé: 10.1.100.50 | MAC: 00:50:56:aa:bb:cc | VLAN: 100
+Tracking in environment: 192.168.0.200
+========================================================================================================
+Date                  Tenant         App Profile         EPG            Encap       MAC                 IP                       Path
+--------------------------------------------------------------------------------------------------------
+2025-09-20 14:30:15   Production     WebApp              Web-Servers    vlan-100    00:50:56:aa:bb:cc   10.1.100.50             topology/pod-1/paths-101/pathep-[eth1/1]
+2025-09-20 14:25:10   Production     WebApp              Web-Servers    vlan-100    00:50:56:aa:bb:cc   10.1.100.50             topology/pod-1/paths-102/pathep-[eth1/1]
+========================================================================================================
 ```
 
-#### Recherche par MAC
+#### Tracking par MAC
 ```bash
 $ python EP_Finder.py
-Environnement: Sandbox
-Choix: 2
+Username: admin
+Search type: 2 (MAC address)
 MAC: 00:50:56:aa:bb:cc
 
-Résultats:
-Switch: leaf-102
-Endpoint trouvé: MAC 00:50:56:aa:bb:cc | IP: 10.2.200.75 | VLAN: 200
+Résultats avec historique complet des transitions:
+- Mouvements entre différents paths
+- Historique des encapsulations
+- Timeline des changements
 ```
 
-#### Recherche Multi-Fabric
+#### Tracking par EPG
 ```bash
 $ python EP_Finder.py
-Environnement: 5 (Tous)
-Choix: 1
-IP: 10.1.100.50
+Search type: 3 (EPG)
+EPG: Web-Servers
 
-[Recherche simultanée sur tous les fabrics...]
-Fabric Sandbox: Endpoint non trouvé
-Fabric Home Lab: Endpoint trouvé sur leaf-101
-Fabric Lab 3: Endpoint non trouvé
-Fabric Lab 4: Endpoint non trouvé
+Affichage de tous les endpoints dans l'EPG avec leur historique
 ```
 
 ## 📊 Format de Sortie
 
-### Informations Affichées
-- **Switch/Leaf** : Identifiant du switch où l'endpoint est connecté
-- **Adresse IP** : Adresse IP de l'endpoint
-- **Adresse MAC** : Adresse MAC physique
-- **VLAN/EPG** : VLAN ou Endpoint Group associé
-- **Statut** : État de l'endpoint (actif/inactif)
+### Colonnes du Tableau de Tracking
+- **Date** : Timestamp de la transition d'endpoint
+- **Tenant** : Tenant ACI où l'endpoint est situé
+- **App Profile** : Profil d'application associé
+- **EPG** : Endpoint Group de rattachement
+- **Encap** : Encapsulation (VLAN) utilisée
+- **MAC** : Adresse MAC physique de l'endpoint
+- **IP** : Adresse IP de l'endpoint
+- **Path** : Chemin physique (leaf, port, etc.)
 
-### Exemple de Rapport
+### Exemple de Rapport Détaillé
 ```
-=== RÉSULTATS DE RECHERCHE ===
-Fabric: Home Lab
-Critère: IP 10.1.100.50
-Timestamp: 2025-09-20 16:15:30
+=== TRACKING D'ENDPOINT ===
+Environment: 192.168.0.200
+Search Criteria: IP 10.1.100.50
+Query URL: https://192.168.0.200/api/node/class/fvCEp.json?...
 
-Switch: leaf-101
-├── IP: 10.1.100.50
-├── MAC: 00:50:56:aa:bb:cc
-├── VLAN: 100
-├── EPG: Web-Servers
-└── Statut: Active
+========================================================================================================
+Date                  Tenant         App Profile         EPG            Encap       MAC                 IP                       Path
+--------------------------------------------------------------------------------------------------------
+2025-09-20 14:30:15   Production     WebApp              Web-Servers    vlan-100    00:50:56:aa:bb:cc   10.1.100.50             topology/pod-1/paths-101/pathep-[eth1/1]
+2025-09-20 14:25:10   Production     WebApp              Web-Servers    vlan-100    00:50:56:aa:bb:cc   10.1.100.50             topology/pod-1/paths-102/pathep-[eth1/1]
+2025-09-20 14:20:05   Production     WebApp              Web-Servers    vlan-100    00:50:56:aa:bb:cc   10.1.100.50             topology/pod-1/paths-101/pathep-[eth1/2]
+========================================================================================================
 ```
 
 ## 🏗️ Architecture Technique
 
 ### Structure du Code
 ```python
-def select_environment()     # Sélection d'environnement ACI
-def get_credentials()        # Récupération sécurisée des credentials
-def connect_to_fabric()      # Établissement connexions SSH
-def search_by_ip()          # Recherche par adresse IP
-def search_by_mac()         # Recherche par adresse MAC
-def execute_command()       # Exécution commandes sur switches
-def main()                  # Orchestration principale
+def getToken()              # Authentification API et récupération token
+def select_environment()    # Sélection d'environnement ACI
+def select_search_type()    # Choix du type de recherche (IP/MAC/EPG)
+def get_search_criteria()   # Saisie des critères de recherche
+def build_query_url()       # Construction des URLs de requête API
+def track_endpoints()       # Orchestration principale du tracking
 ```
 
 ### Flux de Données
-1. **Sélection** → Choix de l'environnement ACI cible
-2. **Authentification** → Saisie sécurisée des credentials
-3. **Connexion** → Établissement des sessions SSH
-4. **Recherche** → Exécution des commandes "show endpoint"
-5. **Affichage** → Présentation formatée des résultats
+1. **Authentification** → Récupération du token ACI via API
+2. **Sélection** → Choix de l'environnement et type de recherche
+3. **Requête** → Appel API pour récupérer les endpoints
+4. **Tracking** → Utilisation de l'API troubleshoot.eptracker
+5. **Affichage** → Présentation tabulaire des transitions
 
 ## 🔒 Sécurité
 
 ### Bonnes Pratiques Implémentées
 - **Saisie sécurisée** des mots de passe (module getpass)
-- **Gestion des timeouts** SSH pour éviter les blocages
-- **Validation des inputs** utilisateur
-- **Fermeture propre** des connexions SSH
+- **Authentification par token** ACI avec gestion de session
+- **Désactivation des warnings SSL** pour environnements lab
+- **Validation des formats** (adresses MAC, IP)
+- **Gestion d'erreurs** pour les appels API
 
 ### Recommandations
-- Utilisez des comptes à privilèges limités
-- Configurez des timeouts appropriés
-- Monitorer les logs de connexion
-- Changez régulièrement les mots de passe
+- Utilisez des comptes à privilèges limités (lecture seule)
+- Activez la validation SSL en production
+- Monitorer les accès API dans les logs APIC
+- Implementez la rotation des tokens pour production
 
 ## 🎯 Cas d'Usage Professionnels
 
 ### Troubleshooting Réseau
-- **Localisation rapide** d'endpoints problématiques
-- **Diagnostic de connectivité** inter-fabric
-- **Vérification de mobilité** des endpoints
+- **Tracking de mobilité** : Analyser les mouvements d'endpoints
+- **Diagnostic de flapping** : Identifier les endpoints instables
+- **Historique des transitions** : Timeline complète des changements
+- **Vérification de path** : Validation des chemins physiques
 
 ### Administration et Monitoring
-- **Audit de placement** des endpoints
-- **Vérification de configuration** VLAN/EPG
-- **Documentation automatique** de la topologie
+- **Audit de placement** des endpoints par EPG
+- **Monitoring des encapsulations** VLAN
+- **Documentation automatique** des topologies
+- **Validation post-migration** des endpoints
 
-### Migration et Maintenance
-- **Planification de migration** d'endpoints
-- **Vérification post-changement**
-- **Cartographie de dépendances**
+### Analyse et Reporting
+- **Rapports de mobilité** pour audit
+- **Détection d'anomalies** de mouvement
+- **Cartographie temps réel** des endpoints
+- **Métriques de stabilité** des endpoints
 
 ## 🚀 Améliorations Futures
 
-- Support des APIs REST ACI
 - Export des résultats en CSV/JSON
-- Interface graphique web
-- Historique des recherches
-- Alertes et monitoring temps réel
+- Interface graphique web avec graphiques
+- Alertes temps réel sur anomalies de mobilité
+- Intégration avec systèmes de monitoring (Grafana)
+- Machine learning pour prédiction de mouvements
+- Support multi-tenant avec filtrage
+- API REST pour intégration système
 
 ## 🤝 Contribution
 
